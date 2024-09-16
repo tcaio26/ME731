@@ -1,6 +1,6 @@
 setwd('trabalho_1') #remover no final
 library(pacman) #carrega outros pacotes
-p_load(tidyverse, GGally, faux, MASS) #tidyverse: conjunto de pacotes muito uteis. GGally: matriz de correlações e dispersões.
+p_load(tidyverse, GGally, faux, MASS, car) #tidyverse: conjunto de pacotes muito uteis. GGally: matriz de correlações e dispersões.
 
 dados_raw = read_csv('ClassicHit.csv') %>% rename_with(~tolower(.x)) %>% mutate(across(c(5,8,10), factor), duration=duration/1000)
 
@@ -10,6 +10,9 @@ ggpairs(dados, lower = list(continuous = wrap('points', alpha=0.05)))
 
 lm(year~.-duration, data = dados) %>% summary()
 lm(popularity~.-year, data = dados) %>% summary()
+
+modmulti = lm(cbind(year, popularity)~., data = dados)
+Anova(modmulti)
 
 
 ##########Simulação
@@ -48,4 +51,5 @@ for(i in 1:100){
 
 ggpairs(estimates[-1,])
 
-
+vcov(mod_multi)
+Anova(mod_multi)
