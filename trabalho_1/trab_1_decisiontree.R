@@ -8,29 +8,20 @@ library(pacman)
 
 p_load(tidyverse, rpart, party, partykit, rpart.plot) #função do pacote pacman para carregar todos os outros pacotes necessários.
 
-dados_raw = read_csv('Speed Dating Data.csv') #carregando dados
+dados_raw = read_csv('Cancer_Data.csv')
 
-na_prop = dados_raw %>% sapply(FUN = function(x) sum(is.na(x))/nrow(dados_raw)) %>% as.vector()
-cols_na_demais = colnames(dados_raw)[which(na_prop>0.2)] 
+dados = dados_raw %>% select(2:12) %>% mutate(diagnosis = factor(diagnosis, levels = c('B','M')))
 
-dados = dados_raw[,-which(na_prop>0.2)] %>% mutate(match = as.factor(match)) #eliminando variáveis com mais de 20% de dados faltantes
+smp = sample(1:nrow(dados), 0.4*nrow(dados))
+treino = dados[smp,]
+teste = dados[-smp,]
 
-smp = sample(1:8378, 3000)
-treino = dados[smp,which(sapply(dados, class)!='character')]
-previsão = dados[-smp,which(sapply(dados, class)!='character')] #dividindo dados em treino (3000 obs.) e previsão (5378 obs.)
+mod = treino %>% rpart(formula = diagnosis~.)
+rpart.plot(mod, type = 1)
 
-mod = treino %>% rpart(formula = match~.-dec-dec_o) #modelando
-rpart.plot(mod, type = 1) #plot
+prev = ifelse(rpart.predict(mod, teste, type = 'vector')==2, 'M', 'B')
 
-prev = rpart.predict(mod, previsão, type = 'vector') #previsão
+sum(teste$diagnosis==prev)/nrow(teste)
+resultados = cbind(previsao = prev, diagnostico = teste$diagnosis) %>% as.data.frame() %>% table()
 
-sum(previsão$match == prev-1)/nrow(previsão) #analisando porcentagem de acertos
-t = cbind(real = previsão$match, previsto = prev) %>% as.data.frame() %>% table()
-
-
-modteste = rpart(Species~., iris)
-
-plot(modteste)
-text(modteste, use.n = T)
-
-summary(modteste)
+proportions(resultados)
