@@ -1,5 +1,4 @@
-###arquivo para arvore de decisão
-setwd('trabalho_1') #remover
+#Aluno: Caio Théodore Genovese Huss Oliveira, RA: 247005
 
 if(!require('pacman', character.only = TRUE)){
   install.packages('pacman')
