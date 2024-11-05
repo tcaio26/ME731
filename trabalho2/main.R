@@ -1,32 +1,28 @@
-setwd('trabalho2')
+setwd('trabalho2') #RETIRAR ANTES DE ENVIAR
 if (!require("pacman")) install.packages("pacman")
-library(pacman)
-p_load(tidyverse, quantmod, xts, vars)
+p_load(tidyverse, quantmod, xts, vars) #pacotes necessários
 
-tickers = c("AAPL", "AMZN", "NFLX", "GOOGL", "MSFT")
+#leitura de dados
+tickers = c("AAPL", "AMZN", "NFLX", "GOOGL", "MSFT") #marcadores das empresas
 
 start_date = as.Date("2006-01-01")
-end_date = as.Date("2017-12-31")
+end_date = as.Date("2017-12-31") #datas de início e fim das séries
 
 dados_faang = list()
 
 for (ticker in tickers) {
   getSymbols(ticker, src = "yahoo", from = start_date, to = end_date, auto.assign = TRUE)
-  dados_faang[[ticker]] <- Cl(get(ticker))  # Extrai apenas os preços de fechamento
+  dados_faang[[ticker]] = Op(get(ticker))  # Extrai os preços de abertura
 }
 
-# Combine as séries em um único objeto xts com apenas os dias úteis
-dados_xts <- do.call(merge, dados_faang)
-colnames(dados_xts) <- tickers  # Nomeia as colunas com os tickers
 
-# Remova as linhas com valores NA (caso alguma série tenha lacunas)
-dados_xts <- na.omit(dados_xts)
+dados_xts = do.call(merge, dados_faang)
+colnames(dados_xts) = tickers #junta as séries em um objeto e nomeia
 
-# Converta para um data frame para uso com a função VAR
-df <- as.data.frame(dados_xts)
+dados_xts = na.omit(dados_xts) #remove valores faltantes
 
-modelo_teste = VAR(df, p = 2)
+df = as.data.frame(dados_xts) #cria um objeto da classe data.frame, para funcionar com a função VAR()
 
-rm(list = c('AAPL', 'AMZN', 'GOOGL', 'MSFT', 'NFLX', 'dados_faang'))
+rm(list = c('AAPL', 'AMZN', 'GOOGL', 'MSFT', 'NFLX', 'dados_faang')) #remove objetos desnecessários
 
-
+#manipulação e aplicação
