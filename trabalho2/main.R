@@ -1,8 +1,32 @@
 setwd('trabalho2')
-library(tidyverse)
+if (!require("pacman")) install.packages("pacman")
+library(pacman)
+p_load(tidyverse, quantmod, xts, vars)
 
-df_raw = read_csv('https://docs.google.com/spreadsheets/d/e/2PACX-1vRnk9nil2iRRo48jWxWUFjX1ZFRhI42rCbjFxJlg9GLHIAnq6iIwYftbxxyHqVkS6q2AG0d-CaB4sZz/pub?gid=412999225&single=true&output=csv')
+tickers = c("AAPL", "AMZN", "NFLX", "GOOGL", "MSFT")
 
-apply(as.matrix(df_raw), 2, function(x) sum(is.na(x))) #todas as séries tem um ou 2 NAs
+start_date = as.Date("2006-01-01")
+end_date = as.Date("2017-12-31")
 
-df = df_raw %>% drop_na()
+dados_faang = list()
+
+for (ticker in tickers) {
+  getSymbols(ticker, src = "yahoo", from = start_date, to = end_date, auto.assign = TRUE)
+  dados_faang[[ticker]] <- Cl(get(ticker))  # Extrai apenas os preços de fechamento
+}
+
+# Combine as séries em um único objeto xts com apenas os dias úteis
+dados_xts <- do.call(merge, dados_faang)
+colnames(dados_xts) <- tickers  # Nomeia as colunas com os tickers
+
+# Remova as linhas com valores NA (caso alguma série tenha lacunas)
+dados_xts <- na.omit(dados_xts)
+
+# Converta para um data frame para uso com a função VAR
+df <- as.data.frame(dados_xts)
+
+modelo_teste = VAR(df, p = 2)
+
+rm(list = c('AAPL', 'AMZN', 'GOOGL', 'MSFT', 'NFLX', 'dados_faang'))
+
+
