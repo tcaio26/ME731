@@ -26,3 +26,6 @@ df = as.data.frame(dados_xts) #cria um objeto da classe data.frame, para funcion
 rm(list = c('AAPL', 'AMZN', 'GOOGL', 'MSFT', 'NFLX', 'dados_faang')) #remove objetos desnecessários
 
 #manipulação e aplicação
+
+VARselect(df, lag.max = 15)
+VAR(df, p = 6, ic = 'AIC') %>% summary()
