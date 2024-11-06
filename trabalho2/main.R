@@ -96,8 +96,8 @@ serial.test(modelo_p14)
 serial.test(modelo_log_p1)
 
 ###PREVISÃO E TESTE
-previsoes = predict(modelo_log_p2, n.ahead = 20, ci = 0.9)
-modelo = modelo_log_p2
+modelo = modelo_log_p6
+previsoes = predict(modelo, n.ahead = 20, ci = 0.9)
 plot(previsoes)
 fanchart(previsoes)
 
