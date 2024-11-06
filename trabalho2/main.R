@@ -25,6 +25,26 @@ df = as.data.frame(dados_xts) #cria um objeto da classe data.frame, para funcion
 
 rm(list = c('AAPL', 'AMZN', 'GOOGL', 'MSFT', 'NFLX', 'dados_faang')) #remove objetos desnecessários
 
+png('serie_AAPL.png', width = 18, height = 6, units = 'cm', res = 100)
+plot(dados_xts$AAPL, main = 'AAPL', asp = 1/4)
+dev.off()
+
+png('serie_AMZN.png', width = 18, height = 6, units = 'cm', res = 100)
+plot(dados_xts$AMZN, main = 'AMZN', asp = 1/4)
+dev.off()
+
+png('serie_GOOGL.png', width = 18, height = 6, units = 'cm', res = 100)
+plot(dados_xts$GOOGL, main = 'GOOGL', asp = 1/4)
+dev.off()
+
+png('serie_MSFT.png', width = 18, height = 6, units = 'cm', res = 100)
+plot(dados_xts$MSFT, main = 'MSFT', asp = 1/4)
+dev.off()
+
+png('serie_NFLX.png', width = 18, height = 6, units = 'cm', res = 100)
+plot(dados_xts$NFLX, main = 'NFLX', asp = 1/4)
+dev.off()
+
 #manipulação e aplicação
 
 VARselect(df, lag.max = 15)
