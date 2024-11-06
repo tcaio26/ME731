@@ -95,45 +95,47 @@ serial.test(modelo_log_p6)
 serial.test(modelo_p14)
 serial.test(modelo_log_p1)
 
-previsoes_log_p2 = predict(modelo_log_p2, n.ahead = 20, ci = 0.9)
-plot(previsoes_log_p2)
-fanchart(previsoes_log_p2)
+###PREVISÃO E TESTE
+previsoes = predict(modelo_log_p2, n.ahead = 20, ci = 0.9)
+modelo = modelo_log_p2
+plot(previsoes)
+fanchart(previsoes)
 
 
 teste_log = df_log[ymd(rownames(df_log))>=ymd('2017-01-01')&ymd(rownames(df_log))<ymd('2017-02-01'),]
 
-res = residuals(modelo_log_p2)
-fits = fitted(modelo_log_p2)
+res = residuals(modelo)
+fits = fitted(modelo)
 for(i in 1:5){
-  fc = structure(list(mean=previsoes_log_p2$fcst[[i]][,"fcst"], x=df_log_treino[,i],
+  fc = structure(list(mean=previsoes$fcst[[i]][,"fcst"], x=df_log_treino[,i],
                        fitted=c(NA,NA,fits[,i])),class="forecast")
   print(accuracy(fc,teste_log[,i]))
 }
 
-df_log = cbind(data = ymd(rownames(df_log)), df_log)
+df_log = cbind(data = ymd(rownames(as.data.frame(dados_log))), as.data.frame(dados_log))
 df_plot = df_log[ymd(rownames(df_log))>=ymd('2016-01-01')&ymd(rownames(df_log))<ymd('2017-02-01'),]
 
-ggplot(data = cbind(as.data.frame(previsoes_log_p2$fcst$AAPL.Open), data = ymd(rownames(teste_log))), aes(x = data))+
+ggplot(data = cbind(as.data.frame(previsoes$fcst$AAPL.Open), data = ymd(rownames(teste_log))), aes(x = data))+
   geom_line(data = df_plot, aes(y = exp(AAPL.Open), group = 1))+
   geom_line(aes(y = exp(fcst), color = 'forecast'), linewidth = 1)+
   geom_ribbon(aes(ymin = exp(lower), ymax = exp(upper)), alpha = 0.2)
 
-ggplot(data = cbind(as.data.frame(previsoes_log_p2$fcst$AMZN.Open), data = ymd(rownames(teste_log))), aes(x = data))+
+ggplot(data = cbind(as.data.frame(previsoes$fcst$AMZN.Open), data = ymd(rownames(teste_log))), aes(x = data))+
   geom_line(data = df_plot, aes(y = exp(AMZN.Open), group = 1))+
   geom_line(aes(y = exp(fcst), color = 'forecast'), linewidth = 1)+
   geom_ribbon(aes(ymin = exp(lower), ymax = exp(upper)), alpha = 0.2)
 
-ggplot(data = cbind(as.data.frame(previsoes_log_p2$fcst$GOOGL.Open), data = ymd(rownames(teste_log))), aes(x = data))+
+ggplot(data = cbind(as.data.frame(previsoes$fcst$GOOGL.Open), data = ymd(rownames(teste_log))), aes(x = data))+
   geom_line(data = df_plot, aes(y = exp(GOOGL.Open), group = 1))+
   geom_line(aes(y = exp(fcst), color = 'forecast'), linewidth = 1)+
   geom_ribbon(aes(ymin = exp(lower), ymax = exp(upper)), alpha = 0.2)
 
-ggplot(data = cbind(as.data.frame(previsoes_log_p2$fcst$MSFT.Open), data = ymd(rownames(teste_log))), aes(x = data))+
+ggplot(data = cbind(as.data.frame(previsoes$fcst$MSFT.Open), data = ymd(rownames(teste_log))), aes(x = data))+
   geom_line(data = df_plot, aes(y = exp(MSFT.Open), group = 1))+
   geom_line(aes(y = exp(fcst), color = 'forecast'), linewidth = 1)+
   geom_ribbon(aes(ymin = exp(lower), ymax = exp(upper)), alpha = 0.2)
 
-ggplot(data = cbind(as.data.frame(previsoes_log_p2$fcst$NFLX.Open), data = ymd(rownames(teste_log))), aes(x = data))+
+ggplot(data = cbind(as.data.frame(previsoes$fcst$NFLX.Open), data = ymd(rownames(teste_log))), aes(x = data))+
   geom_line(data = df_plot, aes(y = exp(NFLX.Open), group = 1))+
   geom_line(aes(y = exp(fcst), color = 'forecast'), linewidth = 1)+
   geom_ribbon(aes(ymin = exp(lower), ymax = exp(upper)), alpha = 0.2)
