@@ -1,6 +1,6 @@
 setwd('trabalho2') #RETIRAR ANTES DE ENVIAR
 if (!require("pacman")) install.packages("pacman")
-p_load(tidyverse, quantmod, xts, vars, tseries, gghighlight, lubridate, lmtest, forecast) #pacotes necessários
+p_load(tidyverse, quantmod, xts, vars, tseries, gghighlight, lubridate, lmtest, forecast, xtable, bruceR) #pacotes necessários
 
 #leitura de dados
 tickers = c("AAPL", "AMZN", "NFLX", "GOOGL", "MSFT") #marcadores das empresas
@@ -66,7 +66,7 @@ for (serie in 1:ncol(dados_log)) {
   print(k$p.value)
 }
 
-crits_log = VARselect(df_log_treino, lag.max = 20, season = 12)
+crits_log = VARselect(df_log_treino, lag.max = 10)
 crits = VARselect(df_treino, lag.max = 20)
 crits_diff = VARselect(df_diff, lag.max = 10)
 
@@ -76,72 +76,96 @@ crits$criteria %>% t() %>% cbind(i = 1:20) %>% as.data.frame() %>% ggplot(aes(x 
   geom_label(data = data.frame(i = 15.5, y = t(crits$criteria[1,14])), aes(y = y, label = paste0('AIC: ', round(y,3))))+
   labs(x = 'p', y = 'AIC')+
   theme_bw()
-  
-crits_log$criteria %>% t() %>% cbind(i = 1:20) %>% as.data.frame() %>% ggplot(aes(x = i))+
+
+png('AIC_lag.png', width = 16, height = 8, units = 'cm', res = 200)  
+crits_log$criteria %>% t() %>% cbind(i = 1:10) %>% as.data.frame() %>% ggplot(aes(x = i))+
   geom_line(aes(y = `AIC(n)`), color = 'darkred')+
   geom_point(data = data.frame(i = 2, y = t(crits_log$criteria[1,2])), aes(y = y), color = 'darkred')+
-  geom_label(data = data.frame(i = 1, y = t(crits_log$criteria[1,2])), aes(y = y, label = paste0('AIC: ', round(y,3))))+
+  geom_label(data = data.frame(i = 3, y = t(crits_log$criteria[1,2])), aes(y = y, label = paste0('AIC: ', round(y,3))), size = 2.5)+
+  scale_x_continuous(breaks = 1:10)+
   labs(x = 'p', y = 'AIC')+
   theme_bw()
+dev.off()
 
 #modelagem
-(modelo_log_p2 = VAR(df_log_treino, p = 2)) %>% summary()
-(modelo_log_p6 = VAR(df_log_treino, p = 6)) %>% summary()
-(modelo_log_p1 = VAR(df_log_treino, p = 1)) %>% summary()
-(modelo_p14 = VAR(df_treino, p = 14)) %>% summary()
-(modelo_diff = VAR(df_diff_treino, p = 1)) %>% summary()
-(modelo_fds = VAR(df_log_treino, p = 34)) %>% plot()
+(modelo_log_p2 = VAR(df_log_treino, p = 2, type = 'trend')) %>% summary()
+(modelo_log_p6 = VAR(df_log_treino, p = 6, type = 'trend')) %>% summary()
+(modelo_log_p1 = VAR(df_log_treino, p = 1, type = 'trend')) %>% summary()
+(modelo_p14 = VAR(df_treino, p = 14, type = 'trend')) %>% summary()
+(modelo_fds = VAR(df_log_treino, p = 34, type = 'trend')) %>% plot()
 
-normality.test(modelo_log_p2) %>% plot()
-normality.test(modelo_log_p1) %>% plot()
-normality.test(modelo_p14) %>% plot()
-normality.test(modelo_log_p6)
-normality.test(modelo_diff) %>% plot()
-
-for(i in 1:100){
-  t = serial.test(VAR(df_log_treino, p = i), lags.pt = 100)
-  print(paste(round(t$serial$p.value, 3), i, sep = '|||'))
+#teste de correlação temporal
+modelos = list(modelo_log_p1, modelo_log_p2, modelo_log_p6, modelo_fds, modelo_diff)
+tabela = data.frame(modelo = character(0), estatistica = numeric(0), GL = numeric(0), p_valor = numeric(0))
+for(modelo in modelos){
+  t = serial.test(modelo, lags.pt = 50)
+  tabela = rbind(tabela, 
+                 data.frame(modelo = paste('modelo', modelo$p), estatistica = round(t$serial$statistic), GL = t$serial$parameter, p_valor = round(t$serial$p.value, 3)))
 }
 
+#causalidade granger
+granger_causality(modelo_log_p2, var.y = "AMZN.Open", var.x = 'AAPL.Open', test = 'F')
 
-roots(modelo_log_p2)
+#decomposição
+decomp = fevd(modelo_log_p2, n.ahead =5)
+decomp$AAPL.Open %>% xtable(digits = 3) %>% print(include.rownames=T)
+decomp$AMZN.Open %>% xtable(digits = 3) %>% print(include.rownames=T)
+decomp$GOOGL.Open %>% xtable(digits = 3) %>% print(include.rownames=T)
+decomp$MSFT.Open %>% xtable(digits = 3) %>% print(include.rownames=T)
+decomp$NFLX.Open %>% xtable(digits = 3) %>% print(include.rownames=T)
 
 ###PREVISÃO E TESTE
-modelo = modelo_fds
+modelo = modelo_log_p2
 df = df_log
 previsoes = predict(modelo, n.ahead = 20, ci = 0.9)
-plot(previsoes)
-fanchart(previsoes)
-
 
 teste = df[ymd(rownames(df))>=ymd('2017-01-01')&ymd(rownames(df))<ymd('2017-02-01'),]
 
-
-dados = df
+dados =  mutate(df, data = ymd(rownames(df)))
 df_plot = dados[ymd(rownames(dados))>=ymd('2016-01-01')&ymd(rownames(dados))<ymd('2017-02-01'),]
 
+png('prev_AAPL.png', height = 8, width = 12, units = 'cm', res = 200)
 ggplot(data = cbind(as.data.frame(previsoes$fcst$AAPL.Open), data = ymd(rownames(teste))), aes(x = data))+
   geom_line(data = df_plot, aes(y = exp(AAPL.Open), group = 1))+
-  geom_line(aes(y = exp(fcst), color = 'forecast'), linewidth = 1)+
-  geom_ribbon(aes(ymin = exp(lower), ymax = exp(upper)), alpha = 0.2)
+  geom_line(aes(y = exp(fcst)), color = 'darkred', linewidth = 1)+
+  geom_ribbon(aes(ymin = exp(lower), ymax = exp(upper)), fill = 'red', alpha = 0.2)+
+  labs(y = 'AAPL', title = 'Previsão para o preço de AAPL')+
+  theme_bw()
+dev.off()
 
+png('prev_AMZN.png', height = 8, width = 12, units = 'cm', res = 200)
 ggplot(data = cbind(as.data.frame(previsoes$fcst$AMZN.Open), data = ymd(rownames(teste))), aes(x = data))+
   geom_line(data = df_plot, aes(y = exp(AMZN.Open), group = 1))+
-  geom_line(aes(y = exp(fcst), color = 'forecast'), linewidth = 1)+
-  geom_ribbon(aes(ymin = exp(lower), ymax = exp(upper)), alpha = 0.2)
+  geom_line(aes(y = exp(fcst)), color = 'darkred', linewidth = 1)+
+  geom_ribbon(aes(ymin = exp(lower), ymax = exp(upper)), fill = 'red', alpha = 0.2)+
+  labs(y = 'AMZN', title = 'Previsão para o preço de AMZN')+
+  theme_bw()
+dev.off()
 
+png('prev_GOOGL.png', height = 8, width = 12, units = 'cm', res = 200)
 ggplot(data = cbind(as.data.frame(previsoes$fcst$GOOGL.Open), data = ymd(rownames(teste))), aes(x = data))+
   geom_line(data = df_plot, aes(y = exp(GOOGL.Open), group = 1))+
-  geom_line(aes(y = exp(fcst), color = 'forecast'), linewidth = 1)+
-  geom_ribbon(aes(ymin = exp(lower), ymax = exp(upper)), alpha = 0.2)
+  geom_line(aes(y = exp(fcst)), color = 'darkred', linewidth = 1)+
+  geom_ribbon(aes(ymin = exp(lower), ymax = exp(upper)), fill = 'red', alpha = 0.2)+
+  labs(y = 'GOOGL', title = 'Previsão para o preço de GOOGL')+
+  theme_bw()
+dev.off()
 
+png('prev_MSFT.png', height = 8, width = 12, units = 'cm', res = 200)
 ggplot(data = cbind(as.data.frame(previsoes$fcst$MSFT.Open), data = ymd(rownames(teste))), aes(x = data))+
   geom_line(data = df_plot, aes(y = exp(MSFT.Open), group = 1))+
-  geom_line(aes(y = exp(fcst), color = 'forecast'), linewidth = 1)+
-  geom_ribbon(aes(ymin = exp(lower), ymax = exp(upper)), alpha = 0.2)
+  geom_line(aes(y = exp(fcst)), color = 'darkred', linewidth = 1)+
+  geom_ribbon(aes(ymin = exp(lower), ymax = exp(upper)), fill = 'red', alpha = 0.2)+
+  labs(y = 'MSFT', title = 'Previsão para o preço de MSFT')+
+  theme_bw()
+dev.off()
 
+png('prev_NFLX.png', height = 8, width = 12, units = 'cm', res = 200)
 ggplot(data = cbind(as.data.frame(previsoes$fcst$NFLX.Open), data = ymd(rownames(teste))), aes(x = data))+
   geom_line(data = df_plot, aes(y = exp(NFLX.Open), group = 1))+
-  geom_line(aes(y = exp(fcst), color = 'forecast'), linewidth = 1)+
-  geom_ribbon(aes(ymin = exp(lower), ymax = exp(upper)), alpha = 0.2)
+  geom_line(aes(y = exp(fcst)), color = 'darkred', linewidth = 1)+
+  geom_ribbon(aes(ymin = exp(lower), ymax = exp(upper)), fill = 'red', alpha = 0.2)+
+  labs(y = 'NFLX', title = 'Previsão para o preço de NFLX')+
+  theme_bw()
+dev.off()
 
